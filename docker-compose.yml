@@ -1,0 +1,63 @@
+# Définition des services et différents conteneurs à lancer (avec config)
+services:
+
+  # Service 1 : Base de données MySQL
+  # ===============================
+  paymybuddy-db:     # Nom du service n°1 (db = database)
+    image: localhost:5000/mysql:8.0   # Utilisation de l'image depuis le registry local
+    container_name: paymybuddy-db
+    restart: always   # Redémarre automatiquement si crash (pour la stabilité)
+
+   # Variables d’environnement
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+
+    # Exposition du port MySQL
+    ports:
+      - "3306:3306"
+
+    # Volumes :
+    # - données de la database conservées même si le conteneur s’arrête
+    # - Lance des scripts SQL au premier démarrage
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./initdb:/docker-entrypoint-initdb.d
+
+    # Healthcheck  - Comment Docker doit test les conteneurs
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Service 2 : Backend Spring Boot
+  # ===============================
+  paymybuddy-backend:    # Nom du service n°2
+    image: localhost:5000/paymybuddy-backend:latest  # Utilisation de l'image depuis le registry local
+    container_name: paymybuddy-backend
+
+    # Le backend dépend de la base de données
+    # Doit attendre que MySQL soit prêt (pas juste lancé)
+    depends_on:
+      paymybuddy-db:
+        condition: service_healthy
+
+   # Port de l’application (machine hôte:conteneur)
+    ports:
+      - "8080:8080"
+
+    # Restart auto si crash
+    restart: always
+
+    # Variables d’environnement (relié au fichier .env)
+    environment:
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+
+# Définition des volumes (persistants)
+volumes:
+  db_data: 
