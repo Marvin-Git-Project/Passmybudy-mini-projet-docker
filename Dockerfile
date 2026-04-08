@@ -1,38 +1,38 @@
-# Étape 1 : L’image de base
-#==============================
-# On utilise Amazon Corretto 17 (énoncé + Java 17 dans "pom.xml")
+# Étape 1 : Build avec Maven
+# ===============================
+# Maven + Java 17 pour compiler le projet
+FROM maven:3.9.9-eclipse-temurin-17 AS builder
+
+# Pour définir le dossier de travail
+WORKDIR /app
+
+# Copie des fichiers nécessaires au build
+COPY pom.xml .
+COPY src ./src
+
+# Compile le projet et génére le fichier .jar
+RUN mvn clean package -DskipTests
+
+# Étape 2 : Image finale (runtime)
+# ===============================
+# Image (légère) pour exécuter l'application
 FROM amazoncorretto:17-alpine
 
-# Étape 2 : Les informations (« créateur et description »)
-# ===============================
+# Informations (créateur + description)
 LABEL maintainer="Marvin-Git-Project"
 LABEL description="Backend Spring Boot - PayMyBuddy"
 
-# Étape 3 : Définir le dossier de travail
-# ===============================
-#Créer le dossier "app" | Toutes les commandes s’exécutent dedans
+# Pour définir le dossier de travail
 WORKDIR /app
 
-# Étape 4 : Copier le fichier JAR
-# ===============================
-# Depuis le dossier "target", copie .jar généré par Maven ds le container -->
-# (renommé app.jar)
-COPY target/paymybuddy.jar app.jar
+# Copie le .jar depuis l'étape précédente
+COPY --from=builder /app/target/paymybuddy.jar app.jar
 
-# Étape 5 : Exposer le port
-# ===============================
-# Spring Boot tourne sur le port 8080 par défaut
+# Expose le port de l'application
 EXPOSE 8080
 
-# Étape 6 : Variables d'environnement
-# ===============================
-# Pour des raisons de sécurité, pas d’info de connexion (ex : mdp)
-# Elles seront injectées via un fichier .env
+# Variables d’environnement
+# (elles seront injectées via le fichier .env avec docker-compose)
 
-
-# Étape 7 : Commande de lancement
-# ===============================
-# Lance l'application Spring Boot
+# Commande de lancement
 CMD ["java", "-jar", "app.jar"]
-
-

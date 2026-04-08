@@ -1,0 +1,36 @@
+services:
+
+  # Registry Docker privé
+  # ===============================
+  registry:
+    image: registry:2
+    container_name: registry
+    ports:
+      - "5000:5000"
+    environment:
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Origin: '["*"]'
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Methods: '["HEAD", "GET", "OPTIONS"]'
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Headers: '["Authorization", "Accept"]'
+    volumes:
+      - registry_data:/var/lib/registry   # stockage persistant
+    restart: always
+
+  # Interface graphique
+  # ===============================
+  registry-ui:
+    image: joxit/docker-registry-ui:latest
+    container_name: registry-ui
+    ports:
+      - "8081:80"
+    environment:
+      REGISTRY_TITLE: "My Docker Registry"
+      REGISTRY_URL: "http://localhost:5000"
+      SINGLE_REGISTRY: "true"
+    depends_on:
+      - registry
+    restart: always
+
+# Volume persistant
+# ===============================
+volumes:
+  registry_data:

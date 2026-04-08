@@ -1,14 +1,15 @@
-# Définition des services et différents conteneurs à lancer (avec config)
+# Définition des services Docker
+# ===============================
 services:
 
   # Service 1 : Base de données MySQL
   # ===============================
-  paymybuddy-db:     # Nom du service n°1 (db = database)
-    image: localhost:5000/mysql:8.0   # Utilisation de l'image depuis le registry local
+  paymybuddy-db: #Nom du service n°1
+    image: mysql:8.0
     container_name: paymybuddy-db
-    restart: always   # Redémarre automatiquement si crash (pour la stabilité)
+    restart: always # Redémarre automatiquement si crash (pour la stabilité)
 
-   # Variables d’environnement
+    # Variables d’environnement
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - MYSQL_DATABASE=${MYSQL_DATABASE}
@@ -26,7 +27,7 @@ services:
       - db_data:/var/lib/mysql
       - ./initdb:/docker-entrypoint-initdb.d
 
-    # Healthcheck  - Comment Docker doit test les conteneurs
+    # Healthcheck (comment docker test les conteneurs)
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -35,20 +36,21 @@ services:
 
   # Service 2 : Backend Spring Boot
   # ===============================
-  paymybuddy-backend:    # Nom du service n°2
-    image: localhost:5000/paymybuddy-backend:latest  # Utilisation de l'image depuis le registry local
+  paymybuddy-backend:
+    build: .   # utilise le Dockerfile (multi-stage)
     container_name: paymybuddy-backend
 
+    # Dépend de MySQL (attend qu'il soit healthy)
     # Le backend dépend de la base de données
     # Doit attendre que MySQL soit prêt (pas juste lancé)
     depends_on:
       paymybuddy-db:
         condition: service_healthy
 
-   # Port de l’application (machine hôte:conteneur)
+    # Port de l’application
     ports:
       - "8080:8080"
-
+      
     # Restart auto si crash
     restart: always
 
@@ -58,6 +60,8 @@ services:
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
 
-# Définition des volumes (persistants)
+
+# Définition des volumes persistants 
+# ===============================
 volumes:
-  db_data: 
+  db_data:
