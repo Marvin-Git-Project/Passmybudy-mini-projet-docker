@@ -1,175 +1,271 @@
 # PayMyBuddy - Dockerized Application
 
 ## Description
-Application Spring Boot permettant de gérer des transactions entre utilisateurs.
 
+Application Spring Boot permettant de gérer des transactions entre utilisateurs.
 Ce projet est entièrement conteneurisé avec Docker :
-- Backend : Spring Boot (Java 17)
-- Base de données : MySQL 8
-- Registry Docker local + interface graphique
+
+- **Backend** : Spring Boot (Java 17)
+- **Base de données** : MySQL 8
+- **Registry Docker privé** + interface graphique (joxit)
 
 ---
 
-## Lancer le projet
+## Prérequis
 
-### 1. Cloner le repository
+- Installer "Docker" ([https://docs.docker.com/get-docker/](https://docs.docker.com/get-docker/))
+- Installer "Docker Compose"
+- Installer "Git"
+
+---
+
+## Étape 1 — Cloner le repository
+
 ```bash
-git clone <URL_DU_REPO>
+git clone https://github.com/Marvin-Git-Project/Passmybudy-mini-projet-docker.git
 cd mini-projet-docker
 ```
 
-### 2. Configurer les variables d’environnement
+---
+
+## Étape 2 — Configurer les variables d'environnement
 
 ```bash
 cp .env.example .env
 ```
-Modifier ci nécessaire.
 
-### 3. Lancer l’application (backend + base de données)
+Le fichier `.env` contient les variables suivantes (modifier SI NECESSAIRE) :
 
-```bash
-docker compose up --build
+```env
+MYSQL_ROOT_PASSWORD=rootpassword
+MYSQL_DATABASE=db_paymybuddy
+MYSQL_USER=user
+MYSQL_PASSWORD=password
+SPRING_DATASOURCE_URL=jdbc:mysql://paymybuddy-db:3306/db_paymybuddy
+SPRING_DATASOURCE_USERNAME=user
+SPRING_DATASOURCE_PASSWORD=password
 ```
 
-### 4. Accéder à l'application
+---
 
-Ouvrir un navigateur :
+## Étape 3 — Builder l'image Docker
+
+Le projet utilise un **build multi-stage** :
+- Étape 1 : compilation du projet avec Maven
+- Étape 2 : exécution dans une image légère `amazoncorretto:17-alpine`
 
 ```bash
-http://localhost:8080
+docker build -t paymybuddy-backend:latest .
 ```
 
-=============================================
+Vérifier que l'image a bien été créée :
 
-### Configuration de la base de données
+```bash
+docker images
+```
 
-   - Host : paymybuddy-db
-   - Port : 3306
-   - Database : db_paymybuddy
-   - Username : user
-   - Password : password
+Résultat attendu :
 
-=============================================
+```
+REPOSITORY             TAG       IMAGE ID       CREATED         SIZE
+paymybuddy-backend     latest    xxxxxxxxxxxx   X seconds ago   XXX MB
+```
 
-## Registry Docker local (avec interface graphique)
+---
 
-### 1. Lancer le registry + UI
+## Étape 4 — Tester l'image avec `docker run`
+
+Avant de déployer, on teste que le conteneur démarre correctement :
+
+```bash
+docker run -d \
+  -p 8080:8080 \
+  --name test-backend \
+  -e SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/db_paymybuddy \
+  -e SPRING_DATASOURCE_USERNAME=user \
+  -e SPRING_DATASOURCE_PASSWORD=password \
+  paymybuddy-backend:latest
+```
+
+Vérifier que le conteneur tourne :
+
+```bash
+docker ps -a
+```
+
+Consulter les logs :
+
+```bash
+docker logs test-backend
+```
+
+Stopper et supprimer le conteneur de test une fois vérifié :
+
+```bash
+docker stop test-backend
+docker rm test-backend
+```
+
+---
+
+## Étape 5 — Lancer le registry Docker privé
 
 ```bash
 docker compose -f docker-compose-registry.yml up -d
 ```
 
-### 2. Tag des images
+Vérifier que le registry et l'interface graphique tournent :
 
 ```bash
-docker tag paymybuddy-backend localhost:5000/paymybuddy-backend
-docker tag mysql:8.0 localhost:5000/mysql:8.0
+docker ps
 ```
 
-### 3. Push vers le registry
+Résultat attendu :
 
-```bash
-docker push localhost:5000/paymybuddy-backend
-docker push localhost:5000/mysql:8.0
+```
+CONTAINER ID   IMAGE                             PORTS                    NAMES
+xxxxxxxxxxxx   registry:2                        0.0.0.0:5000->5000/tcp   registry
+xxxxxxxxxxxx   joxit/docker-registry-ui:latest   0.0.0.0:8081->80/tcp     registry-ui
 ```
 
-### 4. Vérification
-
-```bash
-curl http://localhost:5000/v2/_catalog
-```
-
-Le résultat attendu doit être :
-
-```bash
-{"repositories":["paymybuddy-backend","mysql"]}
-```
-
-### 5. Interface graphique du registry
-
-Depuis le navigateur, accéder à :
+L'interface graphique est accessible depuis le navigateur :
 
 ```
 http://localhost:8081
 ```
 
+---
+
+## Étape 6 — Pousser l'image sur le registry privé
+
+Tagger l'image pour le registry local :
+
+```bash
+docker tag paymybuddy-backend:latest localhost:5000/paymybuddy-backend:latest
+```
+
+Pousser l'image :
+
+```bash
+docker push localhost:5000/paymybuddy-backend:latest
+```
+
+Résultat attendu :
+
+```
+The push refers to repository [localhost:5000/paymybuddy-backend]
+xxxxxxxx: Pushed
+latest: digest: sha256:xxxx size: xxxx
+```
+
+Vérifier que l'image est bien dans le registry :
+
+```bash
+curl http://localhost:5000/v2/_catalog
+```
+
+Résultat attendu :
+
+```json
+{"repositories":["mysql","paymybuddy-backend"]}
+```
+
+---
+
+## Étape 7 — Déployer l'application complète
+
+L'image du backend est maintenant récupérée depuis le registry privé (`localhost:5000`).
+
+```bash
+docker compose up -d
+```
+
+Vérifier que tous les conteneurs tournent :
+
+```bash
+docker ps
+```
+
+Résultat attendu :
+
+```
+CONTAINER ID   IMAGE                                      PORTS                    NAMES
+xxxxxxxxxxxx   localhost:5000/paymybuddy-backend:latest   0.0.0.0:8080->8080/tcp   paymybuddy-backend
+xxxxxxxxxxxx   mysql:8.0                                  0.0.0.0:3306->3306/tcp   paymybuddy-db
+```
+
+Accéder à l'application depuis le navigateur :
+
+```
+http://localhost:8080
+```
+
+---
+
+## Configuration de la base de données
+
+| Paramètre | Valeur |
+|-----------|--------|
+| Host | paymybuddy-db |
+| Port | 3306 |
+| Database | db_paymybuddy |
+| Username | user |
+| Password | password |
+
+
+La base est initialisée automatiquement au premier démarrage grâce aux scripts SQL dans `initdb/`.
+
+Vérifier les tables après démarrage :
+
+```bash
+docker exec -it paymybuddy-db mysql -uuser -ppassword db_paymybuddy
+```
+
+Ensuite, dans le shell MySQL :
+
+```sql
+SHOW TABLES;
+```
+
+---
+
+## Commandes utiles
+
+| Action | Commande |
+|--------|----------|
+| Voir les conteneurs actifs | `docker ps` |
+| Logs du backend | `docker logs paymybuddy-backend` |
+| Logs de la base de données | `docker logs paymybuddy-db` |
+| Stopper l'application | `docker compose down` |
+| Stopper le registry | `docker compose -f docker-compose-registry.yml down` |
+| Reset complet (supprime les volumes) | `docker compose down -v` |
+
+---
+
 ## Structure du projet
 
+```
 mini-projet-docker/
 │
-├── docker-compose.yml
-├── docker-compose-registry.yml
-├── Dockerfile
-├── .env
-├── .env.example
+├── Dockerfile                        # Build multi-stage de l'application
+├── docker-compose.yml                # Orchestration backend + base de données
+├── docker-compose-registry.yml       # Registry Docker privé + UI
+├── .env                              # Variables d'environnement (non versionné)
+├── .env.example                      # Exemple de configuration
 ├── initdb/
-│   └── create.sql
+│   └── create.sql                    # Script d'initialisation de la base
+├── src/                              # Code source Spring Boot
+├── target/
+│   └── paymybuddy.jar                # JAR compilé
 ├── screenshots/
 │   ├── app-login.png
 │   ├── docker-up.png
 │   ├── mysql-tables.png
 │   └── registry.png
 └── README.md
-
-## Fonctionnement de la base de données
-
-- La base est créée automatiquement via Docker
-- MYSQL_DATABASE=db_paymybuddy
-- Les scripts SQL dans " initdb/" sont exécutés au premier démarrage
-
-## Vérification des tables
-
-```bash
-docker exec -it paymybuddy-db mysql -uuser -ppassword db_paymybuddy
 ```
 
-Puis :
-
-```bash
-SHOW TABLES;
-```
-
-## Build automatique (Multi-stage Dockerfile)
-
-Le projet utilise un build multi-stage :
-
-- Étape 1 : compilation Maven
-- Étape 2 : exécution avec une image légère
-
-Aucun fichier .jar n'est nécessaire dans le repository
-
-## Commandes utiles
-
-### Lancer les conteneurs :
-
-```bash
-docker compose up --build
-```
-
-### Stopper les conteneurs 
-
-```bash
-docker compose down
-```
-
-### Reset complet
-
-```bash
-docker compose down -v
-```
-
-### Voir les conteneurs
-
-```bash
-docker ps
-```
-
-### Voir les logs
-
-```bash
-docker logs paymybuddy-backend
-docker logs paymybuddy-db
-```
+---
 
 ## Captures d'écran
 
@@ -179,22 +275,16 @@ docker logs paymybuddy-db
 ### Interface de l'application (login)
 ![Login](./screenshots/app-login.png)
 
-### Registry Docker
+### Registry Docker privé (interface graphique)
 ![Registry](./screenshots/registry.png)
 
 ### Tables MySQL
 ![MySQL](./screenshots/mysql-tables.png)
 
-
-## Points clés du projet
-
-- Utilisation de Docker Compose pour orchestrer plusieurs services
-- Mise en place d’un registry Docker local avec interface graphique
-- Gestion des variables d’environnement avec .env
-- Initialisation automatique de la base de données
-- Build multi-stage Docker (optimisation des images)
-- Communication entre conteneurs via réseau Docker
+---
 
 ## Auteur
-Projet réalisé par Marvin-Git-Project
-Dans le cadre d’un bootcamp proposé par Eazytraining
+
+Projet réalisé par **Marvin-Git-Project**  
+Dans le cadre d'un bootcamp proposé par **Eazytraining**
+

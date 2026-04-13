@@ -37,7 +37,7 @@ services:
   # Service 2 : Backend Spring Boot
   # ===============================
   paymybuddy-backend:
-    build: .   # utilise le Dockerfile (multi-stage)
+    image: localhost:5000/paymybuddy-backend:latest   # utilise l'image du registry
     container_name: paymybuddy-backend
 
     # Dépend de MySQL (attend qu'il soit healthy)
