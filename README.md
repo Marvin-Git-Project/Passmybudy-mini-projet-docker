@@ -23,7 +23,12 @@ Passmybudy-mini-projet-docker/
 ├── .env.example                      # Exemple de configuration
 ├── initdb/
 │   └── create.sql                    # Script d'initialisation de la base
-├── src/                              # Code source Spring Boot
+├── src/
+│   ├── main/
+│   │   ├── java/com/paymybuddy/paymybuddy/
+│   │   └── resources/
+│   └── test/
+│       └── java/com/paymybuddy/paymybuddy/                              # Code source Spring Boot
 ├── screenshots/
 │   ├── app-login.png                 # Interface de connexion de l'application
 │   ├── docker-up.png                 # Conteneurs Docker en cours d'exécution
