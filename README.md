@@ -11,6 +11,31 @@ Ce projet est entièrement conteneurisé avec Docker :
 
 ---
 
+## Structure du projet
+
+```
+Passmybudy-mini-projet-docker/
+│
+├── Dockerfile                        # Build multi-stage de l'application
+├── docker-compose.yml                # Orchestration backend + base de données
+├── docker-compose-registry.yml       # Registry Docker privé + UI
+├── .env                              # Variables d'environnement (non versionné)
+├── .env.example                      # Exemple de configuration
+├── initdb/
+│   └── create.sql                    # Script d'initialisation de la base
+├── src/                              # Code source Spring Boot
+├── screenshots/
+│   ├── app-login.png                 # Interface de connexion de l'application
+│   ├── docker-up.png                 # Conteneurs Docker en cours d'exécution
+│   ├── docker-compose-up.png         # Lancement de l'application complète
+│   ├── docker-compose-registry.png   # Lancement du registry et push de l'image
+│   ├── mysql-tables.png              # Tables de la base de données
+│   └── registry.png                  # Interface graphique du registry
+└── README.md
+```
+
+---
+
 ## Prérequis
 
 - Installer "Docker" ([https://docs.docker.com/get-docker/](https://docs.docker.com/get-docker/))
@@ -23,7 +48,7 @@ Ce projet est entièrement conteneurisé avec Docker :
 
 ```bash
 git clone https://github.com/Marvin-Git-Project/Passmybudy-mini-projet-docker.git
-cd mini-projet-docker
+cd Passmybudy-mini-projet-docker
 ```
 
 ---
@@ -167,8 +192,11 @@ curl http://localhost:5000/v2/_catalog
 Résultat attendu :
 
 ```json
-{"repositories":["mysql","paymybuddy-backend"]}
+{"repositories":["paymybuddy-backend"]}
 ```
+
+### Lancement du registry et push de l'image
+![Registry Push](./screenshots/docker-compose-registry.png)
 
 ---
 
@@ -200,6 +228,12 @@ Accéder à l'application depuis le navigateur :
 http://localhost:8080
 ```
 
+### Lancement de l'application complète
+![Docker Compose Up](./screenshots/docker-compose-up.png)
+
+### Conteneurs Docker en cours d'exécution
+![Docker PS](./screenshots/docker-up.png)
+
 ---
 
 ## Configuration de la base de données
@@ -211,7 +245,6 @@ http://localhost:8080
 | Database | db_paymybuddy |
 | Username | user |
 | Password | password |
-
 
 La base est initialisée automatiquement au premier démarrage grâce aux scripts SQL dans `initdb/`.
 
@@ -229,6 +262,19 @@ SHOW TABLES;
 
 ---
 
+## Captures d'écran
+
+### Interface de l'application (login)
+![Login](./screenshots/app-login.png)
+
+### Registry Docker privé (interface graphique)
+![Registry](./screenshots/registry.png)
+
+### Tables MySQL
+![MySQL](./screenshots/mysql-tables.png)
+
+---
+
 ## Commandes utiles
 
 | Action | Commande |
@@ -242,49 +288,7 @@ SHOW TABLES;
 
 ---
 
-## Structure du projet
-
-```
-mini-projet-docker/
-│
-├── Dockerfile                        # Build multi-stage de l'application
-├── docker-compose.yml                # Orchestration backend + base de données
-├── docker-compose-registry.yml       # Registry Docker privé + UI
-├── .env                              # Variables d'environnement (non versionné)
-├── .env.example                      # Exemple de configuration
-├── initdb/
-│   └── create.sql                    # Script d'initialisation de la base
-├── src/                              # Code source Spring Boot
-├── target/
-│   └── paymybuddy.jar                # JAR compilé
-├── screenshots/
-│   ├── app-login.png
-│   ├── docker-up.png
-│   ├── mysql-tables.png
-│   └── registry.png
-└── README.md
-```
-
----
-
-## Captures d'écran
-
-### Conteneurs Docker en cours d'exécution
-![Docker](./screenshots/docker-up.png)
-
-### Interface de l'application (login)
-![Login](./screenshots/app-login.png)
-
-### Registry Docker privé (interface graphique)
-![Registry](./screenshots/registry.png)
-
-### Tables MySQL
-![MySQL](./screenshots/mysql-tables.png)
-
----
-
 ## Auteur
 
 Projet réalisé par **Marvin-Git-Project**  
 Dans le cadre d'un bootcamp proposé par **Eazytraining**
-
