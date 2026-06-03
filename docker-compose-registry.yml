@@ -1,19 +1,24 @@
 services:
+
+  # Service 1 : Registry Docker privé
+  # ----------------------------------------------
   registry:
     image: registry:2
     container_name: registry
+    # Port exposé vers l'hôte pour pouvoir pusher les images depuis le terminal
     ports:
       - "5000:5000"
     environment:
+      # Permet la suppression d'images depuis l'interface graphique
       REGISTRY_STORAGE_DELETE_ENABLED: "true"
-      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Origin: "[\"http://localhost:8081\"]"
-      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Methods: "[\"HEAD\", \"GET\", \"OPTIONS\", \"DELETE\"]"
-      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Headers: "[\"Authorization\", \"Accept\", \"Cache-Control\"]"
-      REGISTRY_HTTP_HEADERS_Access-Control-Expose-Headers: "[\"Docker-Content-Digest\"]"
+      # Les headers CORS sont supprimés : inutiles car l'UI communique
+      # avec le registry via le proxy Nginx interne (même domaine)
     volumes:
       - registry_data:/var/lib/registry
     restart: always
 
+  # Service 2 : Interface graphique du Registry (joxit)
+  # -------------------------------------------------
   registry-ui:
     image: joxit/docker-registry-ui:latest
     container_name: registry-ui
@@ -21,7 +26,13 @@ services:
       - "8081:80"
     environment:
       REGISTRY_TITLE: "My Docker Registry"
-      REGISTRY_URL: "http://localhost:5000"
+      # REGISTRY_URL supprimé : il forçait le navigateur à appeler http://localhost:5000
+      # ce qui causait une erreur MIXED_CONTENT (page HTTPS -> appel HTTP bloqué)
+
+      # À la place, on utilise NGINX_PROXY_PASS_URL :
+      # Le Nginx interne du conteneur proxifie les requêtes vers le registry
+      # via le réseau Docker (communication conteneur à conteneur)
+      NGINX_PROXY_PASS_URL: "http://registry:5000"
       SINGLE_REGISTRY: "true"
       DELETE_IMAGES: "true"
       SHOW_CONTENT_DIGEST: "true"
@@ -29,5 +40,7 @@ services:
       - registry
     restart: always
 
+# Volume persistant pour stocker les images du registry
+# -------------------------------------------------------
 volumes:
   registry_data:
